@@ -23,6 +23,10 @@ if(ENABLE_JIMPLE_FRONTEND)
   set(JIMPLE_FRONTEND_TARGETS jimple)
 endif()
 
+if(ENABLE_QIR_FRONTEND)
+  set(QIR_FRONTEND_TARGETS qirfrontend)
+endif()
+
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/buildidobj.txt
   COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/buildidobj.py ${CMAKE_CURRENT_BINARY_DIR}/buildidobj.txt
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
@@ -49,6 +53,7 @@ cmake_path(ABSOLUTE_PATH MY_MAGIC_PATH OUTPUT_VARIABLE CVC_LINK_DIR)
 message("Looking at ${CVC_LINK_DIR}")
 target_link_libraries(esbmc ${OLD_FRONTEND_TARGETS} ${SOLIDITY_FRONTEND_TARGETS} ${PYTHON_FRONTEND_TARGETS}
                             ${GOTO_CONTRACTOR_TARGETS} ${JIMPLE_FRONTEND_TARGETS}
+                            ${QIR_FRONTEND_TARGETS}
                             clangcfrontend clangcppfrontend symex langapi
                             solvers clibs gotoalgorithms cache ${Boost_LIBRARIES} goto2c ${OS_INCLUDE_LIBS}
                             nlohmann_json::nlohmann_json)
