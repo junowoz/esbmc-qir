@@ -386,6 +386,16 @@ printf_kindt printf_kind_from_name(const irep_idt &name)
     return printf_kindt::VFPRINTF;
   if (name == "snprintf")
     return printf_kindt::SNPRINTF;
+  if (name == "vprintf")
+    return printf_kindt::VPRINTF;
+  if (name == "vsprintf")
+    return printf_kindt::VSPRINTF;
+  if (name == "vsnprintf")
+    return printf_kindt::VSNPRINTF;
+  if (name == "asprintf")
+    return printf_kindt::ASPRINTF;
+  if (name == "vasprintf")
+    return printf_kindt::VASPRINTF;
   assert(0 && "Unrecognized printf-family base_name");
   abort();
 }
@@ -837,6 +847,20 @@ std::string object_descriptor2t::field_names[esbmct::num_type_fields] =
   {"object", "offset", "alignment", "", ""};
 std::string code_function_call2t::field_names[esbmct::num_type_fields] =
   {"return_sym", "function", "operands", "", ""};
+std::string code_ifthenelse2t::field_names[esbmct::num_type_fields] =
+  {"cond", "then_case", "else_case", "", ""};
+std::string code_while2t::field_names[esbmct::num_type_fields] =
+  {"cond", "body", "", "", ""};
+std::string code_for2t::field_names[esbmct::num_type_fields] =
+  {"init", "cond", "iter", "body", ""};
+std::string code_switch2t::field_names[esbmct::num_type_fields] =
+  {"value", "body", "", "", ""};
+std::string code_break2t::field_names[esbmct::num_type_fields] =
+  {"", "", "", "", ""};
+std::string code_continue2t::field_names[esbmct::num_type_fields] =
+  {"", "", "", "", ""};
+std::string code_label2t::field_names[esbmct::num_type_fields] =
+  {"label", "code", "", "", ""};
 std::string code_comma2t::field_names[esbmct::num_type_fields] =
   {"side_1", "side_2", "", "", ""};
 std::string invalid_pointer2t::field_names[esbmct::num_type_fields] =
