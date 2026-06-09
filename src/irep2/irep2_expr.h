@@ -5,6 +5,7 @@
 #include <util/c_types.h>
 #include <util/fixedbv.h>
 #include <util/ieee_float.h>
+#include <util/location.h>
 #include <irep2/irep2_type.h>
 
 // So - make some type definitions for the different types we're going to be
@@ -95,6 +96,11 @@ enum class printf_kindt
   SPRINTF,
   VFPRINTF,
   SNPRINTF,
+  VPRINTF,
+  VSPRINTF,
+  VSNPRINTF,
+  ASPRINTF,
+  VASPRINTF,
 };
 
 /** Maps the textual base_name of a printf-family symbol (e.g. "printf",
@@ -193,6 +199,13 @@ irep_typedefs(code_free);
 irep_typedefs(code_goto);
 irep_typedefs(object_descriptor);
 irep_typedefs(code_function_call);
+irep_typedefs(code_ifthenelse);
+irep_typedefs(code_while);
+irep_typedefs(code_for);
+irep_typedefs(code_switch);
+irep_typedefs(code_break);
+irep_typedefs(code_continue);
+irep_typedefs(code_label);
 irep_typedefs(code_comma);
 irep_typedefs(invalid_pointer);
 irep_typedefs(code_asm);
@@ -1924,6 +1937,188 @@ public:
     &code_function_call2t::ret,
     &code_function_call2t::function,
     &code_function_call2t::operands);
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+// V.4 (esbmc/esbmc#4715): structured control-flow code kinds. IREP2 had only
+// the flat goto-level code kinds; these mirror the legacy structured codet
+// statements (ifthenelse/while/for/switch/break/continue/label) so the
+// frontend can build IREP2 bodies and goto_convert can consume them, removing
+// the per-instruction back-migration at the body seam (wall W1). Shipped
+// dead-but-tested first: nothing builds them until the goto_convert wiring
+// phase, so they are behaviour-inert and only the round-trip unit tests
+// exercise them (the V-track pattern).
+//
+// V.4.1: each kind carries a `locationt location` so a future IREP2-native
+// goto_convert can stamp each instruction's source location -- the legacy
+// codet carries it on the node, but expr2t/migrate do not, so an IREP2 body
+// would otherwise lose all counterexample line numbers. The field is
+// deliberately NOT part of the `fields` tuple, so it does not enter the IREP2
+// hash/equality (matching how a goto instructiont stores its locationt
+// separately); it is preserved through clone() by the defaulted copy ctor and
+// threaded by hand in migrate (forward copies code.location(), back restores
+// it).
+class code_ifthenelse2t : public expr2t
+{
+public:
+  expr2tc cond;
+  expr2tc then_case;
+  expr2tc else_case; // nil when there is no else branch
+  locationt location; // not reflected (see note above)
+  static constexpr std::size_t excluded_field_bytes = sizeof(locationt);
+
+  code_ifthenelse2t(
+    const expr2tc &c,
+    const expr2tc &t,
+    const expr2tc &e,
+    const locationt &loc = locationt())
+    : expr2t(get_empty_type(), code_ifthenelse_id),
+      cond(c),
+      then_case(t),
+      else_case(e),
+      location(loc)
+  {
+  }
+  code_ifthenelse2t(const code_ifthenelse2t &ref) = default;
+
+  static constexpr auto fields = std::make_tuple(
+    &expr2t::type,
+    &code_ifthenelse2t::cond,
+    &code_ifthenelse2t::then_case,
+    &code_ifthenelse2t::else_case);
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+class code_while2t : public expr2t
+{
+public:
+  expr2tc cond;
+  expr2tc body;
+  locationt location; // not reflected (see note above)
+  static constexpr std::size_t excluded_field_bytes = sizeof(locationt);
+
+  code_while2t(
+    const expr2tc &c,
+    const expr2tc &b,
+    const locationt &loc = locationt())
+    : expr2t(get_empty_type(), code_while_id), cond(c), body(b), location(loc)
+  {
+  }
+  code_while2t(const code_while2t &ref) = default;
+
+  static constexpr auto fields =
+    std::make_tuple(&expr2t::type, &code_while2t::cond, &code_while2t::body);
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+class code_for2t : public expr2t
+{
+public:
+  expr2tc init; // nil when absent
+  expr2tc cond; // nil when absent
+  expr2tc iter; // nil when absent
+  expr2tc body;
+  locationt location; // not reflected (see note above)
+  static constexpr std::size_t excluded_field_bytes = sizeof(locationt);
+
+  code_for2t(
+    const expr2tc &i,
+    const expr2tc &c,
+    const expr2tc &it,
+    const expr2tc &b,
+    const locationt &loc = locationt())
+    : expr2t(get_empty_type(), code_for_id),
+      init(i),
+      cond(c),
+      iter(it),
+      body(b),
+      location(loc)
+  {
+  }
+  code_for2t(const code_for2t &ref) = default;
+
+  static constexpr auto fields = std::make_tuple(
+    &expr2t::type,
+    &code_for2t::init,
+    &code_for2t::cond,
+    &code_for2t::iter,
+    &code_for2t::body);
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+class code_switch2t : public expr2t
+{
+public:
+  expr2tc value;
+  expr2tc body;
+  locationt location; // not reflected (see note above)
+  static constexpr std::size_t excluded_field_bytes = sizeof(locationt);
+
+  code_switch2t(
+    const expr2tc &v,
+    const expr2tc &b,
+    const locationt &loc = locationt())
+    : expr2t(get_empty_type(), code_switch_id), value(v), body(b), location(loc)
+  {
+  }
+  code_switch2t(const code_switch2t &ref) = default;
+
+  static constexpr auto fields =
+    std::make_tuple(&expr2t::type, &code_switch2t::value, &code_switch2t::body);
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+class code_break2t : public expr2t
+{
+public:
+  locationt location; // not reflected (see note above)
+  static constexpr std::size_t excluded_field_bytes = sizeof(locationt);
+
+  code_break2t(const locationt &loc = locationt())
+    : expr2t(get_empty_type(), code_break_id), location(loc)
+  {
+  }
+  code_break2t(const code_break2t &ref) = default;
+
+  static constexpr auto fields = std::make_tuple(&expr2t::type);
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+class code_continue2t : public expr2t
+{
+public:
+  locationt location; // not reflected (see note above)
+  static constexpr std::size_t excluded_field_bytes = sizeof(locationt);
+
+  code_continue2t(const locationt &loc = locationt())
+    : expr2t(get_empty_type(), code_continue_id), location(loc)
+  {
+  }
+  code_continue2t(const code_continue2t &ref) = default;
+
+  static constexpr auto fields = std::make_tuple(&expr2t::type);
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+class code_label2t : public expr2t
+{
+public:
+  irep_idt label;
+  expr2tc code;
+  locationt location; // not reflected (see note above)
+  static constexpr std::size_t excluded_field_bytes = sizeof(locationt);
+
+  code_label2t(
+    const irep_idt &l,
+    const expr2tc &c,
+    const locationt &loc = locationt())
+    : expr2t(get_empty_type(), code_label_id), label(l), code(c), location(loc)
+  {
+  }
+  code_label2t(const code_label2t &ref) = default;
+
+  static constexpr auto fields =
+    std::make_tuple(&expr2t::type, &code_label2t::label, &code_label2t::code);
   static std::string field_names[esbmct::num_type_fields];
 };
 
